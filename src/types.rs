@@ -189,7 +189,7 @@ impl DataLangFile {
                                     fields.push(FieldReference::parse_from_str(field_text)?);
                                 } else {
                                     return Err(ParseError::InvalidSyntax(format!(
-                                        "Invalid field syntax: '{}'. Fields must start with + or -", 
+                                        "Invalid field syntax: '{}'. Fields must start with + or -",
                                         field_text
                                     )));
                                 }
@@ -214,11 +214,39 @@ impl DataLangFile {
                 _ => {
                     // Only allow valid identifiers for struct definitions
                     let name = tokens[0].to_string();
-                    
+
                     // Reject known invalid keywords
-                    if ["function", "fn", "struct", "impl", "let", "const", "static", "use", "mod", "var", "class", "interface", "enum", "type", "pub", "priv", "private", "public", "return", "if", "else", "while", "for", "match", "loop"].contains(&tokens[0]) {
+                    if [
+                        "function",
+                        "fn",
+                        "struct",
+                        "impl",
+                        "let",
+                        "const",
+                        "static",
+                        "use",
+                        "mod",
+                        "var",
+                        "class",
+                        "interface",
+                        "enum",
+                        "type",
+                        "pub",
+                        "priv",
+                        "private",
+                        "public",
+                        "return",
+                        "if",
+                        "else",
+                        "while",
+                        "for",
+                        "match",
+                        "loop",
+                    ]
+                    .contains(&tokens[0])
+                    {
                         return Err(ParseError::InvalidSyntax(format!(
-                            "Invalid DataLang syntax: '{}' is not a valid DataLang construct", 
+                            "Invalid DataLang syntax: '{}' is not a valid DataLang construct",
                             tokens[0]
                         )));
                     }
@@ -258,7 +286,7 @@ impl DataLangFile {
                                 fields.push(FieldReference::parse_from_str(field_text)?);
                             } else {
                                 return Err(ParseError::InvalidSyntax(format!(
-                                    "Invalid field syntax: '{}'. Fields must start with + or -", 
+                                    "Invalid field syntax: '{}'. Fields must start with + or -",
                                     field_text
                                 )));
                             }
