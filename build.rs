@@ -12,6 +12,8 @@ fn main() {
     // Create the macro_definitions directory if it doesn't exist
     fs::create_dir_all(macro_definitions_dir).unwrap();
     
+    let mut validated_files = Vec::new();
+    
     // Read all .txt files from text_definitions
     let text_dir = Path::new(text_definitions_dir);
     if text_dir.exists() && text_dir.is_dir() {
@@ -24,13 +26,12 @@ fn main() {
                 let content = fs::read_to_string(&path).unwrap();
                 
                 // Validate the content before generating
-                println!("cargo:warning=Validating {}.txt", file_stem);
                 match shared::DataLangFile::parse_from_str(&content) {
                     Ok(parsed) => {
                         if let Err(validation_error) = parsed.validate() {
                             panic!("Validation failed for {}.txt: {}", file_stem, validation_error);
                         }
-                        println!("cargo:warning=✓ {}.txt is valid", file_stem);
+                        validated_files.push(file_stem.to_string());
                     }
                     Err(parse_error) => {
                         panic!("Parse error in {}.txt: {}", file_stem, parse_error);
@@ -75,7 +76,6 @@ fn main() {
                 
                 if should_write {
                     fs::write(&output_path, rust_content).unwrap();
-                    println!("cargo:warning=Generated {}", output_path.display());
                 }
                 
                 println!("cargo:rerun-if-changed={}", path.display());
@@ -83,6 +83,15 @@ fn main() {
                 println!("cargo:rerun-if-changed={}", output_path.display());
             }
         }
+    }
+    
+    // Print validation summary
+    if !validated_files.is_empty() {
+        let checkmarks: String = validated_files.iter()
+            .map(|file| format!("✓ {}.txt", file))
+            .collect::<Vec<_>>()
+            .join(" ");
+        println!("cargo:warning=DataLang: Validated {} files", checkmarks);
     }
     
     // Rerun if the text_definitions directory changes
