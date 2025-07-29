@@ -16,7 +16,7 @@ mod tests {
         social_user.name = "Jane".to_string();
         social_user.birthdate = "1995-05-15".to_string();
         social_user.handle = "@jane_dev".to_string();
-        
+
         // Test that SocialMediaUser has expected fields
         assert_eq!(social_user.name, "Jane");
         assert_eq!(social_user.birthdate, "1995-05-15");
@@ -28,22 +28,22 @@ mod tests {
         // This test verifies that SocialMediaUser doesn't have lastname field
         // by ensuring it compiles without lastname
         let social_user = SocialMediaUser::new();
-        
+
         // These fields should exist
         let _ = social_user.name;
         let _ = social_user.birthdate;
         let _ = social_user.handle;
-        
+
         // If lastname field existed, this would cause a compile error:
         // let _ = social_user.lastname; // This line should NOT compile
-        
+
         assert!(true); // Test passes if compilation succeeds
     }
 
     #[test]
     fn test_social_media_user_constructor() {
         let social_user = SocialMediaUser::new();
-        
+
         // Test that new() creates empty strings for all fields
         assert_eq!(social_user.name, "");
         assert_eq!(social_user.birthdate, "");
