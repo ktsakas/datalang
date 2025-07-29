@@ -7,6 +7,5 @@ SocialMediaUser {
     +Base::Name
     +Base::BirthDate
 
-    broken
     +Handle
 }
