@@ -69,7 +69,8 @@ impl Parse for DataLangFile {
                                 fields: Vec::new(),
                             });
                         } else {
-                            return Err(input.error("Expected 'has' keyword or opening brace after term name"));
+                            return Err(input
+                                .error("Expected 'has' keyword or opening brace after term name"));
                         }
                     }
                     "import" => {
@@ -81,22 +82,45 @@ impl Parse for DataLangFile {
                     }
                     _ => {
                         // Check for invalid keywords before assuming struct
-                        let invalid_keywords = ["function", "fn", "struct", "impl", "let", "const", 
-                                              "static", "use", "mod", "var", "class", "interface", 
-                                              "enum", "type", "pub", "priv", "private", "public",
-                                              "test", "describe", "it", "expect", "assert", "should", "spec"];
-                        
+                        let invalid_keywords = [
+                            "function",
+                            "fn",
+                            "struct",
+                            "impl",
+                            "let",
+                            "const",
+                            "static",
+                            "use",
+                            "mod",
+                            "var",
+                            "class",
+                            "interface",
+                            "enum",
+                            "type",
+                            "pub",
+                            "priv",
+                            "private",
+                            "public",
+                            "test",
+                            "describe",
+                            "it",
+                            "expect",
+                            "assert",
+                            "should",
+                            "spec",
+                        ];
+
                         if invalid_keywords.contains(&first_ident.to_string().as_str()) {
                             return Err(lookahead.error());
                         }
 
                         // Assume it's a struct definition
                         let name: syn::Ident = input.parse()?;
-                        
+
                         if !input.peek(syn::token::Brace) {
                             return Err(input.error("Expected opening brace after struct name"));
                         }
-                        
+
                         let content;
                         syn::braced!(content in input);
                         let mut fields = Vec::new();

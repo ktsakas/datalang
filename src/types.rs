@@ -48,11 +48,20 @@ pub enum ParseError {
     UnexpectedToken(String),
     MissingIdentifier(String),
     #[allow(dead_code)]
-    InvalidFieldReference { field: String, reason: String },
+    InvalidFieldReference {
+        field: String,
+        reason: String,
+    },
     #[allow(dead_code)]
-    InvalidKeyword { keyword: String, suggestion: Option<String> },
+    InvalidKeyword {
+        keyword: String,
+        suggestion: Option<String>,
+    },
     #[allow(dead_code)]
-    StructuralError { context: String, issue: String },
+    StructuralError {
+        context: String,
+        issue: String,
+    },
 }
 
 impl std::fmt::Display for ParseError {
@@ -64,11 +73,20 @@ impl std::fmt::Display for ParseError {
             ParseError::InvalidFieldReference { field, reason } => {
                 write!(f, "Invalid field reference '{field}': {reason}")
             }
-            ParseError::InvalidKeyword { keyword, suggestion } => {
+            ParseError::InvalidKeyword {
+                keyword,
+                suggestion,
+            } => {
                 if let Some(suggestion) = suggestion {
-                    write!(f, "Invalid keyword '{keyword}'. Did you mean '{suggestion}'?")
+                    write!(
+                        f,
+                        "Invalid keyword '{keyword}'. Did you mean '{suggestion}'?"
+                    )
                 } else {
-                    write!(f, "Invalid keyword '{keyword}' is not a valid DataLang construct")
+                    write!(
+                        f,
+                        "Invalid keyword '{keyword}' is not a valid DataLang construct"
+                    )
                 }
             }
             ParseError::StructuralError { context, issue } => {
@@ -193,15 +211,16 @@ impl DataLangFile {
     /// Get all items of a specific type
     #[allow(dead_code)]
     pub fn items_by_type(&self, item_type: &str) -> Vec<&DataLangItem> {
-        self.items.iter().filter(|item| {
-            match (item_type, item) {
+        self.items
+            .iter()
+            .filter(|item| match (item_type, item) {
                 ("dictionary", DataLangItem::Dictionary { .. }) => true,
                 ("term", DataLangItem::Term { .. }) => true,
                 ("struct", DataLangItem::Struct { .. }) => true,
                 ("import", DataLangItem::Import { .. }) => true,
                 _ => false,
-            }
-        }).collect()
+            })
+            .collect()
     }
 
     /// Check if file contains any items of a specific type
@@ -214,8 +233,14 @@ impl DataLangFile {
     #[allow(dead_code)]
     pub fn get_fields(&self, name: &str) -> Option<&[FieldReference]> {
         self.items.iter().find_map(|item| match item {
-            DataLangItem::Term { name: item_name, fields } if item_name == name => Some(fields.as_slice()),
-            DataLangItem::Struct { name: item_name, fields } if item_name == name => Some(fields.as_slice()),
+            DataLangItem::Term {
+                name: item_name,
+                fields,
+            } if item_name == name => Some(fields.as_slice()),
+            DataLangItem::Struct {
+                name: item_name,
+                fields,
+            } if item_name == name => Some(fields.as_slice()),
             _ => None,
         })
     }
@@ -315,7 +340,8 @@ impl DataLangFile {
                                 } else {
                                     return Err(ParseError::InvalidFieldReference {
                                         field: field_text.to_string(),
-                                        reason: "Fields must start with + (include) or - (exclude)".to_string(),
+                                        reason: "Fields must start with + (include) or - (exclude)"
+                                            .to_string(),
                                     });
                                 }
                             }
@@ -354,10 +380,38 @@ impl DataLangFile {
                     };
 
                     let invalid_keywords = [
-                        "function", "fn", "struct", "impl", "let", "const", "static", "use", "mod",
-                        "var", "class", "interface", "enum", "type", "pub", "priv", "private", 
-                        "public", "return", "if", "else", "while", "for", "match", "loop",
-                        "test", "describe", "it", "expect", "assert", "should", "spec"
+                        "function",
+                        "fn",
+                        "struct",
+                        "impl",
+                        "let",
+                        "const",
+                        "static",
+                        "use",
+                        "mod",
+                        "var",
+                        "class",
+                        "interface",
+                        "enum",
+                        "type",
+                        "pub",
+                        "priv",
+                        "private",
+                        "public",
+                        "return",
+                        "if",
+                        "else",
+                        "while",
+                        "for",
+                        "match",
+                        "loop",
+                        "test",
+                        "describe",
+                        "it",
+                        "expect",
+                        "assert",
+                        "should",
+                        "spec",
                     ];
 
                     if invalid_keywords.contains(&keyword) {
@@ -403,7 +457,8 @@ impl DataLangFile {
                             } else {
                                 return Err(ParseError::InvalidFieldReference {
                                     field: field_text.to_string(),
-                                    reason: "Fields must start with + (include) or - (exclude)".to_string(),
+                                    reason: "Fields must start with + (include) or - (exclude)"
+                                        .to_string(),
                                 });
                             }
                         }
