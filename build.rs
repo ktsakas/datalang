@@ -1,9 +1,86 @@
 use std::fs;
 use std::path::Path;
+use regex::Regex;
 
 #[path = "src/types.rs"]
 mod types;
 use types as shared;
+
+/// Extract DataLang code blocks from markdown content
+fn extract_datalang_blocks(content: &str) -> Vec<(usize, String)> {
+    let mut blocks = Vec::new();
+    let re = Regex::new(r"(?s)```(?:datalang|rust)\s*\r?\n(.*?)\r?\n```").unwrap();
+    
+    for captures in re.captures_iter(content) {
+        if let Some(code_match) = captures.get(1) {
+            let code = code_match.as_str();
+            // Only include blocks that contain DataLang syntax keywords
+            if code.contains("dictionary") || code.contains("term") || 
+               code.contains("import") || code.contains("datalang!") {
+                let line_number = content[..code_match.start()].lines().count();
+                
+                // Extract content inside datalang! macro if present
+                let cleaned_code = if code.contains("datalang!") {
+                    extract_from_datalang_macro(code)
+                } else {
+                    code.to_string()
+                };
+                
+                blocks.push((line_number, cleaned_code));
+            }
+        }
+    }
+    
+    blocks
+}
+
+/// Extract DataLang syntax from inside datalang! macro blocks
+fn extract_from_datalang_macro(code: &str) -> String {
+    let re = Regex::new(r"(?s)datalang!\s*\{\s*(.*?)\s*\}").unwrap();
+    
+    if let Some(captures) = re.captures(code) {
+        if let Some(inner_match) = captures.get(1) {
+            return inner_match.as_str().to_string();
+        }
+    }
+    
+    code.to_string()
+}
+
+/// Validate DataLang syntax in a markdown file
+fn validate_markdown_file(file_path: &Path) -> Result<Vec<String>, String> {
+    let content = fs::read_to_string(file_path)
+        .map_err(|e| format!("Failed to read {}: {}", file_path.display(), e))?;
+    
+    let blocks = extract_datalang_blocks(&content);
+    let mut validated_blocks = Vec::new();
+    
+    for (line_num, code) in blocks {
+        match shared::DataLangFile::parse_from_str(&code) {
+            Ok(parsed) => {
+                if let Err(validation_error) = parsed.validate() {
+                    return Err(format!(
+                        "{}:{} - Validation failed: {}", 
+                        file_path.display(), 
+                        line_num,
+                        validation_error
+                    ));
+                }
+                validated_blocks.push(format!("{}:{}", file_path.display(), line_num));
+            }
+            Err(parse_error) => {
+                return Err(format!(
+                    "{}:{} - Parse error: {}", 
+                    file_path.display(), 
+                    line_num,
+                    parse_error
+                ));
+            }
+        }
+    }
+    
+    Ok(validated_blocks)
+}
 
 fn main() {
     let text_definitions_dir = "dirctionary_tests/text_definitions";
@@ -86,6 +163,27 @@ fn main() {
         }
     }
 
+    // Validate DataLang syntax in markdown documentation files
+    let mut markdown_validated = Vec::new();
+    let markdown_files = ["README.md", "syntax.md"];
+    
+    for &md_file in &markdown_files {
+        let md_path = Path::new(md_file);
+        if md_path.exists() {
+            match validate_markdown_file(md_path) {
+                Ok(blocks) => {
+                    if !blocks.is_empty() {
+                        markdown_validated.extend(blocks);
+                    }
+                }
+                Err(error) => {
+                    panic!("DataLang syntax validation failed in {md_file}: {error}");
+                }
+            }
+            println!("cargo:rerun-if-changed={md_file}");
+        }
+    }
+
     // Print validation summary
     if !validated_files.is_empty() {
         let checkmarks: String = validated_files
@@ -94,6 +192,11 @@ fn main() {
             .collect::<Vec<_>>()
             .join(" ");
         println!("cargo:warning=DataLang: Validated {checkmarks} files");
+    }
+    
+    if !markdown_validated.is_empty() {
+        let md_count = markdown_validated.len();
+        println!("cargo:warning=DataLang: Validated {md_count} code blocks in documentation");
     }
 
     // Rerun if the text_definitions directory changes
