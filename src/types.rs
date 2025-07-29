@@ -1,9 +1,18 @@
-// Simple text-based parsing for build.rs validation (shared with build script)
+// DataLang types and parsing logic
+// Contains shared types used by both build.rs (string parsing) and lib.rs (syn parsing)
+// #[allow(dead_code)] is used throughout because different compilation contexts use different methods:
+// - build.rs uses parse_from_str() for text processing 
+// - lib.rs uses Parse trait implementations for macro processing
+// - Some fields/variants are only accessed in specific contexts
+
 
 #[derive(Debug, Clone)]
 pub struct FieldReference {
+    #[allow(dead_code)]
     pub is_included: bool, // true for +, false for -
+    #[allow(dead_code)]
     pub namespace: Option<String>,
+    #[allow(dead_code)]
     pub name: String,
 }
 
@@ -14,6 +23,7 @@ pub enum DataLangItem {
     },
     Term {
         name: String,
+        #[allow(dead_code)]
         fields: Vec<FieldReference>,
     },
     Import {
@@ -21,6 +31,7 @@ pub enum DataLangItem {
     },
     Struct {
         name: String,
+        #[allow(dead_code)]
         fields: Vec<FieldReference>,
     },
 }
@@ -31,8 +42,10 @@ pub struct DataLangFile {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum ParseError {
     InvalidSyntax(String),
+    #[allow(dead_code)]
     UnexpectedToken(String),
     MissingIdentifier(String),
 }
@@ -50,7 +63,8 @@ impl std::fmt::Display for ParseError {
 impl std::error::Error for ParseError {}
 
 impl FieldReference {
-    pub fn parse_from_str(input: &str) -> Result<Self, ParseError> {
+    #[allow(dead_code)]
+    pub fn parse_from_str(input: &str) -> std::result::Result<Self, ParseError> {
         let trimmed = input.trim();
         
         // Parse + or -
@@ -82,7 +96,8 @@ impl FieldReference {
 }
 
 impl DataLangFile {
-    pub fn parse_from_str(input: &str) -> Result<Self, ParseError> {
+    #[allow(dead_code)]
+    pub fn parse_from_str(input: &str) -> std::result::Result<Self, ParseError> {
         let mut items = Vec::new();
         let lines: Vec<&str> = input.lines().collect();
         let mut i = 0;
@@ -239,7 +254,8 @@ impl DataLangFile {
         Ok(DataLangFile { items })
     }
     
-    pub fn validate(&self) -> Result<(), ParseError> {
+    #[allow(dead_code)]
+    pub fn validate(&self) -> std::result::Result<(), ParseError> {
         // Basic validation - ensure no empty names
         for item in &self.items {
             match item {

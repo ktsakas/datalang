@@ -3,8 +3,9 @@ use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 use syn::parse::{Parse, ParseStream, Result};
 
-mod shared;
-use shared::{DataLangFile, DataLangItem, FieldReference};
+mod types;
+use types::{DataLangFile, DataLangItem, FieldReference};
+
 
 impl Parse for DataLangFile {
     fn parse(input: ParseStream) -> Result<Self> {
