@@ -1,0 +1,270 @@
+// Simple text-based parsing for build.rs validation (shared with build script)
+
+#[derive(Debug, Clone)]
+pub struct FieldReference {
+    pub is_included: bool, // true for +, false for -
+    pub namespace: Option<String>,
+    pub name: String,
+}
+
+#[derive(Debug, Clone)]
+pub enum DataLangItem {
+    Dictionary {
+        name: String,
+    },
+    Term {
+        name: String,
+        fields: Vec<FieldReference>,
+    },
+    Import {
+        module: String,
+    },
+    Struct {
+        name: String,
+        fields: Vec<FieldReference>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub struct DataLangFile {
+    pub items: Vec<DataLangItem>,
+}
+
+#[derive(Debug)]
+pub enum ParseError {
+    InvalidSyntax(String),
+    UnexpectedToken(String),
+    MissingIdentifier(String),
+}
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseError::InvalidSyntax(msg) => write!(f, "Invalid syntax: {}", msg),
+            ParseError::UnexpectedToken(msg) => write!(f, "Unexpected token: {}", msg),
+            ParseError::MissingIdentifier(msg) => write!(f, "Missing identifier: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ParseError {}
+
+impl FieldReference {
+    pub fn parse_from_str(input: &str) -> Result<Self, ParseError> {
+        let trimmed = input.trim();
+        
+        // Parse + or -
+        let (is_included, rest) = if let Some(rest) = trimmed.strip_prefix('+') {
+            (true, rest.trim())
+        } else if let Some(rest) = trimmed.strip_prefix('-') {
+            (false, rest.trim())
+        } else {
+            return Err(ParseError::InvalidSyntax(
+                "Expected + or - before field reference".to_string()
+            ));
+        };
+        
+        // Parse field reference (Name or Base::Name)
+        if let Some((namespace, name)) = rest.split_once("::") {
+            Ok(FieldReference {
+                is_included,
+                namespace: Some(namespace.trim().to_string()),
+                name: name.trim().to_string(),
+            })
+        } else {
+            Ok(FieldReference {
+                is_included,
+                namespace: None,
+                name: rest.to_string(),
+            })
+        }
+    }
+}
+
+impl DataLangFile {
+    pub fn parse_from_str(input: &str) -> Result<Self, ParseError> {
+        let mut items = Vec::new();
+        let lines: Vec<&str> = input.lines().collect();
+        let mut i = 0;
+        
+        while i < lines.len() {
+            let line = lines[i].trim();
+            
+            // Skip empty lines and comments
+            if line.is_empty() || line.starts_with("//") {
+                i += 1;
+                continue;
+            }
+            
+            let tokens: Vec<&str> = line.split_whitespace().collect();
+            if tokens.is_empty() {
+                i += 1;
+                continue;
+            }
+            
+            match tokens[0] {
+                "dictionary" => {
+                    if tokens.len() < 2 {
+                        return Err(ParseError::MissingIdentifier(
+                            "Expected dictionary name".to_string()
+                        ));
+                    }
+                    let name = tokens[1].to_string();
+                    items.push(DataLangItem::Dictionary { name });
+                    i += 1;
+                }
+                "import" => {
+                    if tokens.len() < 2 {
+                        return Err(ParseError::MissingIdentifier(
+                            "Expected module name after import".to_string()
+                        ));
+                    }
+                    let module = tokens[1].to_string();
+                    items.push(DataLangItem::Import { module });
+                    i += 1;
+                }
+                "term" => {
+                    if tokens.len() < 2 {
+                        return Err(ParseError::MissingIdentifier(
+                            "Expected term name".to_string()
+                        ));
+                    }
+                    let name = tokens[1].to_string();
+                    
+                    // Look for "has" keyword and opening brace
+                    let has_fields = tokens.len() > 2 && tokens[2] == "has";
+                    
+                    // Find the opening brace
+                    let mut brace_line = i;
+                    let mut found_brace = false;
+                    
+                    // Check if brace is on the same line
+                    if line.contains('{') {
+                        found_brace = true;
+                    } else {
+                        // Look for brace on subsequent lines
+                        for j in (i + 1)..lines.len() {
+                            if lines[j].trim().contains('{') {
+                                brace_line = j;
+                                found_brace = true;
+                                break;
+                            }
+                            if !lines[j].trim().is_empty() && lines[j].trim() != "has" {
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if !found_brace {
+                        return Err(ParseError::InvalidSyntax(
+                            format!("Expected opening brace after term {}", name)
+                        ));
+                    }
+                    
+                    // Parse fields if this is a composite term
+                    let mut fields = Vec::new();
+                    if has_fields {
+                        let mut field_line = brace_line + 1;
+                        while field_line < lines.len() {
+                            let field_text = lines[field_line].trim();
+                            if field_text == "}" {
+                                break;
+                            }
+                            if !field_text.is_empty() && (field_text.starts_with('+') || field_text.starts_with('-')) {
+                                fields.push(FieldReference::parse_from_str(field_text)?);
+                            }
+                            field_line += 1;
+                        }
+                        i = field_line + 1;
+                    } else {
+                        // Simple term, find the closing brace
+                        let mut close_line = brace_line + 1;
+                        while close_line < lines.len() {
+                            if lines[close_line].trim() == "}" {
+                                break;
+                            }
+                            close_line += 1;
+                        }
+                        i = close_line + 1;
+                    }
+                    
+                    items.push(DataLangItem::Term { name, fields });
+                }
+                _ => {
+                    // Assume it's a struct definition
+                    let name = tokens[0].to_string();
+                    
+                    // Find the opening brace
+                    let mut brace_line = i;
+                    let mut found_brace = false;
+                    
+                    if line.contains('{') {
+                        found_brace = true;
+                    } else {
+                        for j in (i + 1)..lines.len() {
+                            if lines[j].trim().contains('{') {
+                                brace_line = j;
+                                found_brace = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if !found_brace {
+                        return Err(ParseError::InvalidSyntax(
+                            format!("Expected opening brace after struct {}", name)
+                        ));
+                    }
+                    
+                    // Parse fields
+                    let mut fields = Vec::new();
+                    let mut field_line = brace_line + 1;
+                    while field_line < lines.len() {
+                        let field_text = lines[field_line].trim();
+                        if field_text == "}" {
+                            break;
+                        }
+                        if !field_text.is_empty() && (field_text.starts_with('+') || field_text.starts_with('-')) {
+                            fields.push(FieldReference::parse_from_str(field_text)?);
+                        }
+                        field_line += 1;
+                    }
+                    
+                    items.push(DataLangItem::Struct { name, fields });
+                    i = field_line + 1;
+                }
+            }
+        }
+        
+        Ok(DataLangFile { items })
+    }
+    
+    pub fn validate(&self) -> Result<(), ParseError> {
+        // Basic validation - ensure no empty names
+        for item in &self.items {
+            match item {
+                DataLangItem::Dictionary { name } => {
+                    if name.is_empty() {
+                        return Err(ParseError::InvalidSyntax("Dictionary name cannot be empty".to_string()));
+                    }
+                }
+                DataLangItem::Term { name, .. } => {
+                    if name.is_empty() {
+                        return Err(ParseError::InvalidSyntax("Term name cannot be empty".to_string()));
+                    }
+                }
+                DataLangItem::Import { module } => {
+                    if module.is_empty() {
+                        return Err(ParseError::InvalidSyntax("Import module cannot be empty".to_string()));
+                    }
+                }
+                DataLangItem::Struct { name, .. } => {
+                    if name.is_empty() {
+                        return Err(ParseError::InvalidSyntax("Struct name cannot be empty".to_string()));
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}

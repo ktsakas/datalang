@@ -1,7 +1,9 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Ident, Token, braced};
+use syn::{parse_macro_input, DeriveInput, Ident, Token};
 use syn::parse::{Parse, ParseStream, Result};
+
+mod shared;
 
 // Let's try to use our own macro (this will fail)
 /*
@@ -16,6 +18,16 @@ struct FieldReference {
     is_included: bool, // true for +, false for -
     namespace: Option<String>,
     name: String,
+}
+
+impl From<shared::FieldReference> for FieldReference {
+    fn from(shared_ref: shared::FieldReference) -> Self {
+        Self {
+            is_included: shared_ref.is_included,
+            namespace: shared_ref.namespace,
+            name: shared_ref.name,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -36,12 +48,42 @@ enum DataLangItem {
     },
 }
 
+impl DataLangItem {
+    fn from_shared_with_span(shared_item: shared::DataLangItem, span: proc_macro2::Span) -> Self {
+        match shared_item {
+            shared::DataLangItem::Dictionary { name } => {
+                DataLangItem::Dictionary {
+                    name: Ident::new(&name, span),
+                }
+            }
+            shared::DataLangItem::Term { name, fields } => {
+                DataLangItem::Term {
+                    name: Ident::new(&name, span),
+                    fields: fields.into_iter().map(FieldReference::from).collect(),
+                }
+            }
+            shared::DataLangItem::Import { module } => {
+                DataLangItem::Import {
+                    module: Ident::new(&module, span),
+                }
+            }
+            shared::DataLangItem::Struct { name, fields } => {
+                DataLangItem::Struct {
+                    name: Ident::new(&name, span),
+                    fields: fields.into_iter().map(FieldReference::from).collect(),
+                }
+            }
+        }
+    }
+}
+
 struct DataLangFile {
     items: Vec<DataLangItem>,
 }
 
 impl Parse for FieldReference {
     fn parse(input: ParseStream) -> Result<Self> {
+        // This is kept for compatibility but not used in the main parsing flow
         // Parse + or -
         let is_included = if input.peek(Token![+]) {
             input.parse::<Token![+]>()?;
@@ -101,7 +143,7 @@ impl Parse for DataLangFile {
                             }
                             
                             let content;
-                            braced!(content in input);
+                            syn::braced!(content in input);
                             let mut fields = Vec::new();
                             
                             while !content.is_empty() {
@@ -113,7 +155,7 @@ impl Parse for DataLangFile {
                         } else {
                             // term Name { }
                             let _content;
-                            braced!(_content in input);
+                            syn::braced!(_content in input);
                             items.push(DataLangItem::Term { name, fields: Vec::new() });
                         }
                     }
@@ -126,7 +168,7 @@ impl Parse for DataLangFile {
                         // Assume it's a struct definition
                         let name: Ident = input.parse()?;
                         let content;
-                        braced!(content in input);
+                        syn::braced!(content in input);
                         let mut fields = Vec::new();
                         
                         while !content.is_empty() {
