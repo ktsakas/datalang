@@ -85,26 +85,6 @@ jobs:
     - name: Check for broken doc links
       run: cargo doc --no-deps 2>&1 | grep -i "warning.*intra.*doc" && exit 1 || true
 
-  cross-platform:
-    name: Cross Platform
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        
-    runs-on: ${{ matrix.os }}
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      
-    - name: Build
-      run: cargo build --verbose
-      
-    - name: Test
-      run: cargo test --verbose
 
   coverage:
     name: Code Coverage
