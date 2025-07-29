@@ -11,7 +11,8 @@
       "Bash(cat:*)",
       "Bash(sed:*)",
       "Bash(touch:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(rustc:*)"
     ],
     "deny": []
   }

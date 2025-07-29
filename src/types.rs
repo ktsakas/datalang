@@ -184,10 +184,15 @@ impl DataLangFile {
                             if field_text == "}" {
                                 break;
                             }
-                            if !field_text.is_empty()
-                                && (field_text.starts_with('+') || field_text.starts_with('-'))
-                            {
-                                fields.push(FieldReference::parse_from_str(field_text)?);
+                            if !field_text.is_empty() && !field_text.starts_with("//") {
+                                if field_text.starts_with('+') || field_text.starts_with('-') {
+                                    fields.push(FieldReference::parse_from_str(field_text)?);
+                                } else {
+                                    return Err(ParseError::InvalidSyntax(format!(
+                                        "Invalid field syntax: '{}'. Fields must start with + or -", 
+                                        field_text
+                                    )));
+                                }
                             }
                             field_line += 1;
                         }
@@ -207,8 +212,16 @@ impl DataLangFile {
                     items.push(DataLangItem::Term { name, fields });
                 }
                 _ => {
-                    // Assume it's a struct definition
+                    // Only allow valid identifiers for struct definitions
                     let name = tokens[0].to_string();
+                    
+                    // Reject known invalid keywords
+                    if ["function", "fn", "struct", "impl", "let", "const", "static", "use", "mod", "var", "class", "interface", "enum", "type", "pub", "priv", "private", "public", "return", "if", "else", "while", "for", "match", "loop"].contains(&tokens[0]) {
+                        return Err(ParseError::InvalidSyntax(format!(
+                            "Invalid DataLang syntax: '{}' is not a valid DataLang construct", 
+                            tokens[0]
+                        )));
+                    }
 
                     // Find the opening brace
                     let mut brace_line = i;
@@ -240,10 +253,15 @@ impl DataLangFile {
                         if field_text == "}" {
                             break;
                         }
-                        if !field_text.is_empty()
-                            && (field_text.starts_with('+') || field_text.starts_with('-'))
-                        {
-                            fields.push(FieldReference::parse_from_str(field_text)?);
+                        if !field_text.is_empty() && !field_text.starts_with("//") {
+                            if field_text.starts_with('+') || field_text.starts_with('-') {
+                                fields.push(FieldReference::parse_from_str(field_text)?);
+                            } else {
+                                return Err(ParseError::InvalidSyntax(format!(
+                                    "Invalid field syntax: '{}'. Fields must start with + or -", 
+                                    field_text
+                                )));
+                            }
                         }
                         field_line += 1;
                     }
