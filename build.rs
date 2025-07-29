@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::Path;
 
+#[path = "src/shared.rs"]
 mod shared;
 
 fn main() {

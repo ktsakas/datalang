@@ -12,6 +12,10 @@ syn = { version = "2.0", features = ["full"] }
 quote = "1.0"
 proc-macro2 = "1.0"
 
+[build-dependencies]
+syn = { version = "2.0", features = ["full"] }
+proc-macro2 = "1.0"
+
 # Add a workspace for integration tests
 [workspace]
 members = ["dirctionary_tests"]
