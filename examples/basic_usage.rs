@@ -44,10 +44,10 @@ fn main() {
     let birth_date = BirthDate::new();
     let handle = Handle::new();
 
-    println!("   Name: {:?}", name);
-    println!("   LastName: {:?}", last_name);
-    println!("   BirthDate: {:?}", birth_date);
-    println!("   Handle: {:?}", handle);
+    println!("   Name: {name:?}");
+    println!("   LastName: {last_name:?}");
+    println!("   BirthDate: {birth_date:?}");
+    println!("   Handle: {handle:?}");
 
     // 2. Composite terms
     println!("\n2. Composite Terms:");
@@ -56,7 +56,7 @@ fn main() {
     user.lastname = "Doe".to_string();
     user.birthdate = "1990-01-01".to_string();
 
-    println!("   User: {:?}", user);
+    println!("   User: {user:?}");
 
     // 3. Selective field inclusion
     println!("\n3. Selective Field Inclusion:");
@@ -65,7 +65,7 @@ fn main() {
     social_user.birthdate = "1995-05-15".to_string();
     social_user.handle = "@jane_doe".to_string();
 
-    println!("   SocialMediaUser: {:?}", social_user);
+    println!("   SocialMediaUser: {social_user:?}");
     println!("   Note: Has name, birthdate, handle - but NO lastname");
 
     // 4. Minimal example
@@ -73,7 +73,7 @@ fn main() {
     let mut minimal = MinimalUser::new();
     minimal.name = "Alice".to_string();
 
-    println!("   MinimalUser: {:?}", minimal);
+    println!("   MinimalUser: {minimal:?}");
     println!("   Note: Only has name field");
 
     println!("\n✅ All DataLang features working correctly!");

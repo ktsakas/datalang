@@ -30,7 +30,7 @@ impl Parse for DataLangFile {
                         if input.peek(syn::Ident) && input.peek2(syn::token::Brace) {
                             // term Name has { ... }
                             let has_keyword: syn::Ident = input.parse()?;
-                            if has_keyword.to_string() != "has" {
+                            if has_keyword != "has" {
                                 return Err(input.error("Expected 'has' after term name"));
                             }
 
@@ -144,7 +144,7 @@ pub fn datalang(input: TokenStream) -> TokenStream {
             DataLangItem::Dictionary { name } => {
                 // Dictionary declarations don't generate code directly
                 // In a real implementation, you'd track these for namespace resolution
-                println!("cargo:warning=Processing dictionary: {}", name);
+                println!("cargo:warning=Processing dictionary: {name}");
             }
             DataLangItem::Term { name, fields } => {
                 if fields.is_empty() {
@@ -204,7 +204,7 @@ pub fn datalang(input: TokenStream) -> TokenStream {
             DataLangItem::Import { module } => {
                 // Import declarations don't generate code directly
                 // In a real implementation, you'd use these for module resolution
-                println!("cargo:warning=Processing import: {}", module);
+                println!("cargo:warning=Processing import: {module}");
             }
             DataLangItem::Struct { name, fields } => {
                 // Regular struct - process field inclusions/exclusions

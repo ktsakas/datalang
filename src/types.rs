@@ -52,9 +52,9 @@ pub enum ParseError {
 impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseError::InvalidSyntax(msg) => write!(f, "Invalid syntax: {}", msg),
-            ParseError::UnexpectedToken(msg) => write!(f, "Unexpected token: {}", msg),
-            ParseError::MissingIdentifier(msg) => write!(f, "Missing identifier: {}", msg),
+            ParseError::InvalidSyntax(msg) => write!(f, "Invalid syntax: {msg}"),
+            ParseError::UnexpectedToken(msg) => write!(f, "Unexpected token: {msg}"),
+            ParseError::MissingIdentifier(msg) => write!(f, "Missing identifier: {msg}"),
         }
     }
 }
@@ -157,13 +157,13 @@ impl DataLangFile {
                         found_brace = true;
                     } else {
                         // Look for brace on subsequent lines
-                        for j in (i + 1)..lines.len() {
-                            if lines[j].trim().contains('{') {
+                        for (j, line) in lines.iter().enumerate().skip(i + 1) {
+                            if line.trim().contains('{') {
                                 brace_line = j;
                                 found_brace = true;
                                 break;
                             }
-                            if !lines[j].trim().is_empty() && lines[j].trim() != "has" {
+                            if !line.trim().is_empty() && line.trim() != "has" {
                                 break;
                             }
                         }
@@ -171,8 +171,7 @@ impl DataLangFile {
 
                     if !found_brace {
                         return Err(ParseError::InvalidSyntax(format!(
-                            "Expected opening brace after term {}",
-                            name
+                            "Expected opening brace after term {name}"
                         )));
                     }
 
@@ -218,8 +217,8 @@ impl DataLangFile {
                     if line.contains('{') {
                         found_brace = true;
                     } else {
-                        for j in (i + 1)..lines.len() {
-                            if lines[j].trim().contains('{') {
+                        for (j, line) in lines.iter().enumerate().skip(i + 1) {
+                            if line.trim().contains('{') {
                                 brace_line = j;
                                 found_brace = true;
                                 break;
@@ -229,8 +228,7 @@ impl DataLangFile {
 
                     if !found_brace {
                         return Err(ParseError::InvalidSyntax(format!(
-                            "Expected opening brace after struct {}",
-                            name
+                            "Expected opening brace after struct {name}"
                         )));
                     }
 
