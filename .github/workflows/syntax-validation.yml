@@ -1,0 +1,168 @@
+name: DataLang Syntax Validation
+
+on:
+  push:
+    paths:
+      - 'dirctionary_tests/text_definitions/**'
+      - 'src/types.rs'
+      - 'build.rs'
+      - 'syntax.md'
+  pull_request:
+    paths:
+      - 'dirctionary_tests/text_definitions/**'
+      - 'src/types.rs'
+      - 'build.rs'
+      - 'syntax.md'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  validate-syntax:
+    name: Validate DataLang Syntax Files
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Cache cargo
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: syntax-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        
+    - name: Clean previous build
+      run: cargo clean
+      
+    - name: Validate syntax files
+      run: |
+        echo "🔍 Validating DataLang syntax files..."
+        cargo build --verbose 2>&1 | tee build_output.txt
+        
+        # Check if validation passed
+        if grep -q "DataLang:" build_output.txt; then
+          echo "✅ Syntax validation output found"
+          grep "DataLang:" build_output.txt
+        else
+          echo "❌ No DataLang validation output found"
+          exit 1
+        fi
+        
+        # Check for any parsing errors
+        if grep -qi "parse error\|validation fail" build_output.txt; then
+          echo "❌ Parsing errors found in syntax files"
+          exit 1
+        fi
+        
+    - name: Verify generated files
+      run: |
+        echo "🔍 Checking generated macro files..."
+        
+        # List all text definition files
+        echo "Text definition files:"
+        find dirctionary_tests/text_definitions -name "*.txt" -type f
+        
+        # Check corresponding generated files exist
+        for txt_file in dirctionary_tests/text_definitions/*.txt; do
+          if [ -f "$txt_file" ]; then
+            base_name=$(basename "$txt_file" .txt)
+            rs_file="dirctionary_tests/macro_definitions/${base_name}.rs"
+            
+            if [ -f "$rs_file" ]; then
+              echo "✅ $rs_file generated from $txt_file"
+              
+              # Verify file has proper header
+              if head -5 "$rs_file" | grep -q "automatically generated"; then
+                echo "   ✅ Has proper generation header"
+              else
+                echo "   ❌ Missing generation header"
+                exit 1
+              fi
+              
+              # Verify file contains datalang! macro
+              if grep -q "datalang!" "$rs_file"; then
+                echo "   ✅ Contains datalang! macro"
+              else
+                echo "   ❌ Missing datalang! macro"
+                exit 1
+              fi
+              
+            else
+              echo "❌ Missing generated file: $rs_file"
+              exit 1
+            fi
+          fi
+        done
+        
+    - name: Test generated code compiles
+      run: |
+        echo "🔍 Testing generated code compilation..."
+        cd dirctionary_tests
+        cargo check --verbose
+        
+    - name: Syntax consistency check
+      run: |
+        echo "🔍 Checking syntax consistency..."
+        
+        # Verify all .txt files follow expected patterns
+        for txt_file in dirctionary_tests/text_definitions/*.txt; do
+          if [ -f "$txt_file" ]; then
+            echo "Checking syntax patterns in $txt_file..."
+            
+            # Check for basic syntax elements (this is a simple check)
+            if grep -E "(dictionary|term|import)" "$txt_file" > /dev/null; then
+              echo "✅ Contains expected DataLang keywords"
+            else
+              echo "⚠️  No DataLang keywords found in $txt_file"
+            fi
+          fi
+        done
+
+  test-syntax-changes:
+    name: Test Syntax Changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Test with modified syntax
+      run: |
+        echo "🧪 Testing syntax modifications..."
+        
+        # Build and test to ensure changes don't break existing functionality
+        cargo build --verbose
+        cargo test --verbose
+        
+        # Test the dictionary workspace
+        cd dirctionary_tests
+        cargo build --verbose
+        cargo test --verbose
+        
+    - name: Compare generated files
+      run: |
+        echo "🔍 Checking if generated files are up to date..."
+        
+        # Build to regenerate files
+        cargo build
+        
+        # Check if there are any uncommitted changes to generated files
+        if git diff --exit-code dirctionary_tests/macro_definitions/; then
+          echo "✅ Generated files are up to date"
+        else
+          echo "❌ Generated files have uncommitted changes:"
+          git diff dirctionary_tests/macro_definitions/
+          echo "Please run 'cargo build' and commit the updated generated files"
+          exit 1
+        fi
