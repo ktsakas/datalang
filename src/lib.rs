@@ -12,8 +12,9 @@ impl Parse for DataLangFile {
 
         while !input.is_empty() {
             if input.peek(syn::Ident) {
-                let _lookahead = input.lookahead1();
-                let first_ident: syn::Ident = input.fork().parse()?;
+                let lookahead = input.lookahead1();
+                let fork = input.fork();
+                let first_ident: syn::Ident = fork.parse()?;
 
                 match first_ident.to_string().as_str() {
                     "dictionary" => {
@@ -27,7 +28,19 @@ impl Parse for DataLangFile {
                         input.parse::<syn::Ident>()?; // consume "term"
                         let name: syn::Ident = input.parse()?;
 
-                        if input.peek(syn::Ident) && input.peek2(syn::token::Brace) {
+                        // Use proper lookahead to determine term structure
+                        let has_fields = if input.peek(syn::Ident) {
+                            let fork = input.fork();
+                            if let Ok(maybe_has) = fork.parse::<syn::Ident>() {
+                                maybe_has == "has" && fork.peek(syn::token::Brace)
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        };
+
+                        if has_fields {
                             // term Name has { ... }
                             let has_keyword: syn::Ident = input.parse()?;
                             if has_keyword != "has" {
@@ -47,7 +60,7 @@ impl Parse for DataLangFile {
                                 name: name.to_string(),
                                 fields,
                             });
-                        } else {
+                        } else if input.peek(syn::token::Brace) {
                             // term Name { }
                             let _content;
                             syn::braced!(_content in input);
@@ -55,6 +68,8 @@ impl Parse for DataLangFile {
                                 name: name.to_string(),
                                 fields: Vec::new(),
                             });
+                        } else {
+                            return Err(input.error("Expected 'has' keyword or opening brace after term name"));
                         }
                     }
                     "import" => {
@@ -65,8 +80,23 @@ impl Parse for DataLangFile {
                         });
                     }
                     _ => {
+                        // Check for invalid keywords before assuming struct
+                        let invalid_keywords = ["function", "fn", "struct", "impl", "let", "const", 
+                                              "static", "use", "mod", "var", "class", "interface", 
+                                              "enum", "type", "pub", "priv", "private", "public",
+                                              "test", "describe", "it", "expect", "assert", "should", "spec"];
+                        
+                        if invalid_keywords.contains(&first_ident.to_string().as_str()) {
+                            return Err(lookahead.error());
+                        }
+
                         // Assume it's a struct definition
                         let name: syn::Ident = input.parse()?;
+                        
+                        if !input.peek(syn::token::Brace) {
+                            return Err(input.error("Expected opening brace after struct name"));
+                        }
+                        
                         let content;
                         syn::braced!(content in input);
                         let mut fields = Vec::new();
@@ -101,14 +131,21 @@ impl Parse for FieldReference {
             input.parse::<syn::Token![-]>()?;
             false
         } else {
-            return Err(input.error("Expected + or - before field reference"));
+            return Err(input.error("Field references must start with + (include) or - (exclude)"));
         };
 
         // Parse field reference (Name or Base::Name)
+        if !input.peek(syn::Ident) {
+            return Err(input.error("Expected field name after + or -"));
+        }
+
         let first_part: syn::Ident = input.parse()?;
 
         if input.peek(syn::Token![::]) {
             input.parse::<syn::Token![::]>()?;
+            if !input.peek(syn::Ident) {
+                return Err(input.error("Expected field name after namespace separator ::"));
+            }
             let second_part: syn::Ident = input.parse()?;
             Ok(FieldReference {
                 is_included,

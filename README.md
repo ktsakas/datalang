@@ -38,6 +38,7 @@ use datalang::datalang;
 datalang! {
     dictionary Base
     
+    test What {}
     term Name {}
     term User has { +Name }
 }

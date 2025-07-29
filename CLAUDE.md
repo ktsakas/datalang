@@ -1,2 +1,3 @@
-- We are designing a DSL for data transformation
+- You are designing a DSL for data transformation
+- You always use lookahead parsing when possible
 - YOUR CODE should always be able to parse the syntax in syntax.md

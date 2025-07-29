@@ -12,7 +12,8 @@
       "Bash(sed:*)",
       "Bash(touch:*)",
       "Bash(cp:*)",
-      "Bash(rustc:*)"
+      "Bash(rustc:*)",
+      "Bash(./test_iterators)"
     ],
     "deny": []
   }
