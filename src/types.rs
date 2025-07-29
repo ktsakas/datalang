@@ -213,12 +213,14 @@ impl DataLangFile {
     pub fn items_by_type(&self, item_type: &str) -> Vec<&DataLangItem> {
         self.items
             .iter()
-            .filter(|item| match (item_type, item) {
-                ("dictionary", DataLangItem::Dictionary { .. }) => true,
-                ("term", DataLangItem::Term { .. }) => true,
-                ("struct", DataLangItem::Struct { .. }) => true,
-                ("import", DataLangItem::Import { .. }) => true,
-                _ => false,
+            .filter(|item| {
+                matches!(
+                    (item_type, item),
+                    ("dictionary", DataLangItem::Dictionary { .. })
+                        | ("term", DataLangItem::Term { .. })
+                        | ("struct", DataLangItem::Struct { .. })
+                        | ("import", DataLangItem::Import { .. })
+                )
             })
             .collect()
     }
