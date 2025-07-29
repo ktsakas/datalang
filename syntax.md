@@ -1,15 +1,54 @@
 # Macro syntax should support the following
-User {
-    #[length < 10]
-    name
 
-    last_name
+in base.rs we want to have:
+```
+dictionary Base
 
-    birthdate
+term Name {
+}
+
+term LastName {
+}
+
+term BirthDate {
+}
+
+term User has {
+    +Name
+
+    +LastName
+
+    +BirthDate
+}
+
+in social_media.rs we want:
+```
+import Base
+
+term Handle {
+
 }
 
 SocialMediaUser {
-    trait User
+    +Base::Name
+    +Base::BirthDate
 
-    handle
+    +Handle
 }
+```
+
+and this should be equivalent to:
+```
+import Base
+
+term Handle {
+
+}
+
+SocialMediaUser {
+    +Base::User
+    -Base::LastName
+
+    +Handle
+}
+```

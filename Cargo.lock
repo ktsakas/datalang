@@ -12,6 +12,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "datalang_tests"
+version = "0.1.0"
+dependencies = [
+ "datalang",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
